@@ -13,7 +13,7 @@ export const manifest = setupManifest({
   volumes: ['main', 'db', 'search'],
   images: {
     linkwarden: {
-      source: { dockerTag: 'ghcr.io/linkwarden/linkwarden:v2.16.0' },
+      source: { dockerTag: 'ghcr.io/linkwarden/linkwarden:v2.16.3' },
       arch: ['x86_64', 'aarch64'],
     },
     postgres: {
@@ -21,7 +21,7 @@ export const manifest = setupManifest({
       arch: ['x86_64', 'aarch64'],
     },
     meilisearch: {
-      source: { dockerTag: 'getmeili/meilisearch:v1.12.8' },
+      source: { dockerTag: 'getmeili/meilisearch:v1.13.3' },
       arch: ['x86_64', 'aarch64'],
     },
   },

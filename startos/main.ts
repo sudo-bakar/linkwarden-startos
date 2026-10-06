@@ -110,10 +110,19 @@ export const main = sdk.setupMain(async ({ effects }) => {
         subcontainer: meiliSub,
         exec: {
           command: sdk.useEntrypoint(),
-          env: { MEILI_MASTER_KEY: meiliKey },
+          env: {
+            MEILI_MASTER_KEY: meiliKey,
+            // MeiliSearch database files are version-locked; on first boot
+            // after an image bump this upgrades the volume's index in place.
+            // A no-op on fresh installs and on every later boot.
+            MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE: 'true',
+          },
         },
         ready: {
           display: null,
+          // The upgrade runs before the HTTP server binds, so a large index
+          // can delay readiness past the default grace period.
+          gracePeriod: 60_000,
           fn: () =>
             sdk.healthCheck.checkPortListening(effects, meiliPort, {
               successMessage: i18n('MeiliSearch is ready'),
