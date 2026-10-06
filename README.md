@@ -63,6 +63,12 @@ Postgres is started with `listen_addresses=127.0.0.1`, which keeps it inside
 the shared namespace; the application reaches both sidecars on loopback. Neither
 sidecar binds an interface, so neither is reachable from outside the service.
 
+MeiliSearch's database files are version-locked to the binary that wrote them,
+so the meilisearch daemon is started with
+`MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE=true`: after an image bump it upgrades the
+`search` volume's index in place on first boot. The flag is a no-op on fresh
+installs and on every later boot.
+
 ## Volume and Data Layout
 
 Three volumes, one per service, because a backup strategy is chosen per volume
@@ -218,12 +224,16 @@ dependencies.
 | Check         | Displayed       | Method                            | Grace |
 | ------------- | --------------- | --------------------------------- | ----- |
 | `postgres`    | hidden          | `pg_isready` inside the container | —     |
-| `meilisearch` | hidden          | the index port is listening       | —     |
+| `meilisearch` | hidden          | the index port is listening       | 60 s  |
 | `linkwarden`  | "Web Interface" | HTTP GET on the internal port     | 60 s  |
 
 Only the application's check is shown, because the sidecars are an
 implementation detail the user cannot act on. An HTTP probe rather than a port
 check catches "listening but still compiling".
+
+The meilisearch check allows a full minute because an in-place index upgrade —
+which runs before the HTTP server binds — can outlast the default grace period
+on a large index.
 
 A `linkwarden` failure that outlasts the grace period is usually a failed
 migration — the service logs carry the Prisma error. If it never goes green at
@@ -294,6 +304,7 @@ startos_managed_env_vars:
   - DATABASE_URL
   - MEILI_HOST
   - MEILI_MASTER_KEY
+  - MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE
   - NEXT_PUBLIC_DISABLE_REGISTRATION
   - NEXT_PUBLIC_CREDENTIALS_ENABLED
   - NEXT_PUBLIC_ADMIN

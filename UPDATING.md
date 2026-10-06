@@ -41,9 +41,26 @@ the other two follow whatever upstream's Compose file ships.
 
 Pinned to the tag upstream's Compose file ships, to avoid untested drift. To
 bump it, check the architectures the same way and update
-`images.meilisearch.source.dockerTag`. The package sets only
-`MEILI_MASTER_KEY`; upstream's Compose sets nothing else either, so resist
-adding to it without an upstream change that calls for it.
+`images.meilisearch.source.dockerTag`.
+
+**MeiliSearch databases are version-locked.** A newer binary refuses to open an
+index written by an older one, so the daemon is started with
+`MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE=true` (`main.ts`), which upgrades the
+`search` volume in place on first boot after the bump. The flag supports
+databases from 1.12 onward — a larger jump than that needs a dump/import
+migration instead. On every bump:
+
+- Read the release notes for upgrade-path changes, and check the new binary
+  still accepts the flag (`meilisearch --help`, or grep the `option.rs` for
+  `experimental_dumpless_upgrade` in the release's source).
+- Rehearse the old → new upgrade in Docker: seed a volume with the old image,
+  boot the new image with the flag, confirm the index upgrades and a document
+  from the old version is still searchable. `1.12.8 → 1.13.3` was verified this
+  way (2026-10-06).
+- Keep `postgres` and its major in step with upstream's Compose file; see below.
+
+The daemon's health check allows a 60 s grace period because the upgrade runs
+before the HTTP server binds.
 
 ## PostgreSQL
 
